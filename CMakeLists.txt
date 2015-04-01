@@ -97,6 +97,9 @@ set(libpng_sources
   pngwrite.c
   pngwtran.c
   pngwutil.c
+  arm/arm_init.c
+  arm/filter_neon.S
+  arm/filter_neon_intrinsics.c
 )
 set(pngtest_sources
   pngtest.c
