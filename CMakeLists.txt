@@ -11,13 +11,14 @@ set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
 set(CMAKE_CONFIGURATION_TYPES "Release;Debug;MinSizeRel;RelWithDebInfo")
 
-project(libpng C)
-
 include("cmake/HunterGate.cmake")
 HunterGate(
-  URL "https://github.com/ruslo/hunter/archive/v0.7.5.tar.gz"
-  SHA1 "264a0bd8f658bb6f50767146bde080d7c9788baf"
-  )
+    URL "https://github.com/ruslo/hunter/archive/v0.8.1.tar.gz"
+    SHA1 "a9bd96ab113f3af870b13cd05cf4e75b8848cf4a"
+)
+
+project(libpng C)
+
 hunter_add_package(ZLIB)
 
 enable_testing()
