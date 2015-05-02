@@ -115,11 +115,6 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(png ${libpng_sources})
 set(PNG_LIB_TARGETS png)
-if(MSVC)
-  # msvc does not append 'lib' - do it here to have consistent name
-  set_target_properties(png PROPERTIES PREFIX "lib")
-  set_target_properties(png PROPERTIES IMPORT_PREFIX "lib")
-endif()
 target_link_libraries(png ZLIB::zlib ${M_LIBRARY})
 
 if(BUILD_SHARED_LIBS AND WIN32)
@@ -170,11 +165,6 @@ if(PNG_TESTS)
     ${CMAKE_CURRENT_SOURCE_DIR}/contrib/pngsuite/ftp1n3p08.png
   )
 endif()
-
-# Ensure the CMAKE_LIBRARY_OUTPUT_DIRECTORY is set
-IF(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
-  SET(CMAKE_LIBRARY_OUTPUT_DIRECTORY "lib")
-ENDIF(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
 
 # Set a variable with CMake code which:
 # Creates a symlink from src to dest (if possible) or alternatively
