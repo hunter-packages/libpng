@@ -9,8 +9,6 @@
 cmake_minimum_required(VERSION 3.0)
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
-set(CMAKE_CONFIGURATION_TYPES "Release;Debug;MinSizeRel;RelWithDebInfo")
-
 include("cmake/HunterGate.cmake")
 HunterGate(
     URL "https://github.com/ruslo/hunter/archive/v0.8.1.tar.gz"
