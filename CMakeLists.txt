@@ -15,7 +15,7 @@ HunterGate(
     SHA1 "a9bd96ab113f3af870b13cd05cf4e75b8848cf4a"
 )
 
-project(libpng VERSION 1.6.16 LANGUAGES C)
+project(PNG VERSION 1.6.16 LANGUAGES C)
 
 hunter_add_package(ZLIB)
 
