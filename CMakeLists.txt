@@ -49,9 +49,6 @@ option(PNG_TESTS  "Build libpng tests" YES)
 option(PNG_DEBUG         "Build with debug output" NO)
 option(PNGARG            "Disable ANSI-C prototypes" NO)
 
-# SET LIBNAME
-set(PNG_LIB_NAME png${PNGLIB_MAJOR}${PNGLIB_MINOR})
-
 # to distinguish between debug and release lib
 set(CMAKE_DEBUG_POSTFIX "d")
 
@@ -116,32 +113,30 @@ endif()
 # NOW BUILD OUR TARGET
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-unset(PNG_LIB_TARGETS)
-
-add_library(${PNG_LIB_NAME} ${libpng_sources})
-set(PNG_LIB_TARGETS ${PNG_LIB_NAME})
+add_library(png ${libpng_sources})
+set(PNG_LIB_TARGETS png)
 if(MSVC)
   # msvc does not append 'lib' - do it here to have consistent name
-  set_target_properties(${PNG_LIB_NAME} PROPERTIES PREFIX "lib")
-  set_target_properties(${PNG_LIB_NAME} PROPERTIES IMPORT_PREFIX "lib")
+  set_target_properties(png PROPERTIES PREFIX "lib")
+  set_target_properties(png PROPERTIES IMPORT_PREFIX "lib")
 endif()
-target_link_libraries(${PNG_LIB_NAME} ZLIB::zlib ${M_LIBRARY})
+target_link_libraries(png ZLIB::zlib ${M_LIBRARY})
 
 if(BUILD_SHARED_LIBS AND WIN32)
-  set_target_properties(${PNG_LIB_NAME} PROPERTIES DEFINE_SYMBOL PNG_BUILD_DLL)
+  set_target_properties(png PROPERTIES DEFINE_SYMBOL PNG_BUILD_DLL)
 endif()
 
 if(PNG_TESTS)
   # does not work with msvc due to png_lib_ver issue
   add_executable(pngtest ${pngtest_sources})
-  target_link_libraries(pngtest ${PNG_LIB_NAME})
+  target_link_libraries(pngtest png)
   add_test(pngtest ./pngtest ${CMAKE_CURRENT_SOURCE_DIR}/pngtest.png)
   #
   add_executable(pngvalid ${pngvalid_sources})
-  target_link_libraries(pngvalid ${PNG_LIB_NAME})
+  target_link_libraries(pngvalid png)
   add_test(pngvalid ./pngvalid)
   add_executable(pngstest ${pngstest_sources})
-  target_link_libraries(pngstest ${PNG_LIB_NAME})
+  target_link_libraries(pngstest png)
   add_test(pngstest ./pngstest
     ${CMAKE_CURRENT_SOURCE_DIR}/contrib/pngsuite/basn0g01.png
     ${CMAKE_CURRENT_SOURCE_DIR}/contrib/pngsuite/basn0g02.png
@@ -291,5 +286,5 @@ endif()
 # On versions of CMake that support it, create an export file CMake
 # users can include() to import our targets
 if(PNG_EXPORT_RULE AND NOT SKIP_INSTALL_EXPORT AND NOT SKIP_INSTALL_ALL )
-  install(EXPORT libpng DESTINATION lib/libpng FILE lib${PNG_LIB_NAME}.cmake)
+  install(EXPORT libpng DESTINATION lib/libpng FILE libpng.cmake)
 endif()
