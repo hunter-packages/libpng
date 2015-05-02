@@ -1,5 +1,3 @@
-# CMakeLists.txt
-
 # Copyright (C) 2007-2014 Glenn Randers-Pehrson
 
 # This code is released under the libpng license.
@@ -273,7 +271,6 @@ endif(NOT WIN32 OR CYGWIN OR MINGW)
 # SET UP LINKS
 if(PNG_SHARED)
   set_target_properties(${PNG_LIB_NAME} PROPERTIES
-#   VERSION 16.${PNGLIB_RELEASE}.1.6.16
     VERSION 16.${PNGLIB_RELEASE}.0
     SOVERSION 16
     CLEAN_DIRECT_OUTPUT 1)
@@ -379,16 +376,3 @@ endif()
 if(PNG_EXPORT_RULE AND NOT SKIP_INSTALL_EXPORT AND NOT SKIP_INSTALL_ALL )
   install(EXPORT libpng DESTINATION lib/libpng FILE lib${PNG_LIB_NAME}.cmake)
 endif()
-
-# what's with libpng-manual.txt and all the extra files?
-
-# UNINSTALL
-# do we need this?
-
-# DIST
-# do we need this?
-
-# to create msvc import lib for mingw compiled shared lib
-# pexports libpng.dll > libpng.def
-# lib /def:libpng.def /machine:x86
-
