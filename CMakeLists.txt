@@ -46,7 +46,6 @@ endif()
 option(PNG_TESTS  "Build libpng tests" YES)
 
 # Many more configuration options could be added here
-option(PNG_DEBUG         "Build with debug output" NO)
 option(PNGARG            "Disable ANSI-C prototypes" NO)
 
 # to distinguish between debug and release lib
@@ -108,15 +107,13 @@ if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
 endif(MSVC)
 
-if(PNG_DEBUG)
-  add_definitions(-DPNG_DEBUG)
-endif()
-
 # NOW BUILD OUR TARGET
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(png ${libpng_sources})
 target_link_libraries(png ZLIB::zlib ${M_LIBRARY})
+
+target_compile_definitions(png PUBLIC "$<$<CONFIG:Debug>:PNG_DEBUG>")
 
 if(BUILD_SHARED_LIBS AND WIN32)
   set_target_properties(png PROPERTIES DEFINE_SYMBOL PNG_BUILD_DLL)
