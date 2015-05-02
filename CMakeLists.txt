@@ -17,8 +17,6 @@ HunterGate(
 
 project(PNG VERSION 1.6.16 LANGUAGES C)
 
-hunter_add_package(ZLIB)
-
 enable_testing()
 
 set(PNGLIB_MAJOR ${PROJECT_VERSION_MAJOR})
@@ -28,8 +26,8 @@ set(PNGLIB_NAME libpng${PNGLIB_MAJOR}${PNGLIB_MINOR})
 set(PNGLIB_VERSION ${PNGLIB_MAJOR}.${PNGLIB_MINOR}.${PNGLIB_RELEASE})
 
 # needed packages
-find_package(ZLIB REQUIRED)
-include_directories(${ZLIB_INCLUDE_DIR})
+hunter_add_package(ZLIB)
+find_package(ZLIB CONFIG REQUIRED)
 
 if(NOT WIN32)
   find_library(M_LIBRARY
@@ -128,7 +126,7 @@ if(PNG_DEBUG)
 endif()
 
 # NOW BUILD OUR TARGET
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${ZLIB_INCLUDE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 unset(PNG_LIB_TARGETS)
 
@@ -140,7 +138,7 @@ if(PNG_SHARED)
     set_target_properties(${PNG_LIB_NAME} PROPERTIES PREFIX "lib")
     set_target_properties(${PNG_LIB_NAME} PROPERTIES IMPORT_PREFIX "lib")
   endif()
-  target_link_libraries(${PNG_LIB_NAME} ${ZLIB_LIBRARY} ${M_LIBRARY})
+  target_link_libraries(${PNG_LIB_NAME} ZLIB::zlib ${M_LIBRARY})
 endif()
 
 if(PNG_STATIC)
@@ -152,7 +150,7 @@ if(PNG_STATIC)
     # msvc does not append 'lib' - do it here to have consistent name
     set_target_properties(${PNG_LIB_NAME_STATIC} PROPERTIES PREFIX "lib")
   endif()
-  target_link_libraries(${PNG_LIB_NAME_STATIC} ${ZLIB_LIBRARY} ${M_LIBRARY})
+  target_link_libraries(${PNG_LIB_NAME_STATIC} ZLIB::zlib ${M_LIBRARY})
 endif()
 
 if(NOT PNG_LIB_TARGETS)
