@@ -116,7 +116,7 @@ target_link_libraries(png ZLIB::zlib ${M_LIBRARY})
 target_compile_definitions(png PUBLIC "$<$<CONFIG:Debug>:PNG_DEBUG>")
 
 if(BUILD_SHARED_LIBS AND WIN32)
-  set_target_properties(png PROPERTIES DEFINE_SYMBOL PNG_BUILD_DLL)
+  target_compile_definitions(png PUBLIC "PNG_BUILD_DLL")
 endif()
 
 if(PNG_TESTS)
