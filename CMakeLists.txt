@@ -118,7 +118,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 unset(PNG_LIB_TARGETS)
 
-add_library(${PNG_LIB_NAME} SHARED ${libpng_sources})
+add_library(${PNG_LIB_NAME} ${libpng_sources})
 set(PNG_LIB_TARGETS ${PNG_LIB_NAME})
 if(MSVC)
   # msvc does not append 'lib' - do it here to have consistent name
