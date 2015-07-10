@@ -28,20 +28,6 @@ set(PNGLIB_VERSION ${PNGLIB_MAJOR}.${PNGLIB_MINOR}.${PNGLIB_RELEASE})
 hunter_add_package(ZLIB)
 find_package(ZLIB CONFIG REQUIRED)
 
-if(NOT WIN32)
-  find_library(M_LIBRARY
-    NAMES m
-    PATHS /usr/lib /usr/local/lib
-  )
-  if(NOT M_LIBRARY)
-    message(STATUS
-      "math library 'libm' not found - floating point support disabled")
-  endif()
-else()
-  # not needed on windows
-  set(M_LIBRARY "")
-endif()
-
 # COMMAND LINE OPTIONS
 option(PNG_TESTS  "Build libpng tests" YES)
 
@@ -111,7 +97,16 @@ endif(MSVC)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(png ${libpng_sources})
-target_link_libraries(png ZLIB::zlib ${M_LIBRARY})
+
+# Some platforms (e.g. Linux) need separate math library
+include(CheckLibraryExists)
+check_library_exists(m pow "" LIB_M_REQUIRED)
+set(M_LIBRARY "")
+if(LIB_M_REQUIRED)
+  set(M_LIBRARY m)
+endif()
+
+target_link_libraries(png PRIVATE ZLIB::zlib ${M_LIBRARY})
 
 target_compile_definitions(png PUBLIC "$<$<CONFIG:Debug>:PNG_DEBUG>")
 
