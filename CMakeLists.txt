@@ -397,6 +397,11 @@ endif()
 
 target_link_libraries(png PRIVATE ZLIB::zlib ${M_LIBRARY})
 
+if(MSVC)
+  # ExitProcess
+  target_link_libraries(png PUBLIC Kernel32)
+endif()
+
 target_compile_definitions(png PUBLIC "$<$<CONFIG:Debug>:PNG_DEBUG>")
 
 if(BUILD_SHARED_LIBS AND WIN32)
