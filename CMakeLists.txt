@@ -370,6 +370,14 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(png ${libpng_sources})
 
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore")
+  # ExitProcess not available
+  target_compile_definitions(png PRIVATE -DPNG_WINDOWS_STORE)
+elseif(MSVC)
+  # ExitProcess
+  target_link_libraries(png PUBLIC Kernel32)
+endif()
+
 # Some platforms (e.g. Linux) need separate math library
 include(CheckLibraryExists)
 check_library_exists(m pow "" LIB_M_REQUIRED)
@@ -396,11 +404,6 @@ if(PNG_FRAMEWORK)
 endif()
 
 target_link_libraries(png PRIVATE ZLIB::zlib ${M_LIBRARY})
-
-if(MSVC)
-  # ExitProcess
-  target_link_libraries(png PUBLIC Kernel32)
-endif()
 
 target_compile_definitions(png PUBLIC "$<$<CONFIG:Debug>:PNG_DEBUG>")
 
