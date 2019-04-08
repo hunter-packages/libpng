@@ -6,6 +6,7 @@
 # Revised by Roger Lowman, 2009-2010
 # Revised by Clifford Yapp, 2011-2012,2017
 # Revised by Roger Leigh, 2016
+# Copyright (C) 2015 Ruslan Baratov
 # Revised by Andreas Franek, 2016
 # Revised by Sam Serrels, 2017
 # Revised by Vadim Barkov, 2017
@@ -20,48 +21,49 @@
 
 cmake_minimum_required(VERSION 3.1)
 cmake_policy(VERSION 3.1)
+set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
-project(libpng C ASM)
+include("cmake/HunterGate.cmake")
+HunterGate(
+    URL "https://github.com/ruslo/hunter/archive/v0.23.152.tar.gz"
+    SHA1 "0c9801f60a8149c3105db04501bbcfb155581b7d"
+)
+
+project(PNG VERSION 1.6.36 LANGUAGES C ASM)
+
 enable_testing()
 
-set(PNGLIB_MAJOR 1)
-set(PNGLIB_MINOR 6)
-set(PNGLIB_RELEASE 36)
+set(PNGLIB_MAJOR ${PROJECT_VERSION_MAJOR})
+set(PNGLIB_MINOR ${PROJECT_VERSION_MINOR})
+set(PNGLIB_RELEASE ${PROJECT_VERSION_PATCH})
 set(PNGLIB_NAME libpng${PNGLIB_MAJOR}${PNGLIB_MINOR})
 set(PNGLIB_VERSION ${PNGLIB_MAJOR}.${PNGLIB_MINOR}.${PNGLIB_RELEASE})
 
 include(GNUInstallDirs)
 
 # needed packages
-
-# Allow users to specify location of Zlib.
-# Useful if zlib is being built alongside this as a sub-project.
-option(PNG_BUILD_ZLIB "Custom zlib Location, else find_package is used" OFF)
-
-if(NOT PNG_BUILD_ZLIB)
-  find_package(ZLIB REQUIRED)
-  include_directories(${ZLIB_INCLUDE_DIR})
+if(${CMAKE_MAJOR_VERSION} GREATER 3 OR
+    (${CMAKE_MAJOR_VERSION} EQUAL 3 AND ${CMAKE_MINOR_VERSION} GREATER_EQUAL 12))
+  # For CMake >= 3.12, find_package(<PackageName>) searches prefixes given by
+  # <PackageName>_ROOT CMake variable and <PackageName>_ROOT
+  # environment variable.
+  cmake_policy(SET CMP0074 NEW)
 endif()
-
-if(UNIX AND NOT APPLE AND NOT BEOS AND NOT HAIKU)
-  find_library(M_LIBRARY m)
-else()
-  # libm is not needed and/or not available
-  set(M_LIBRARY "")
-endif()
+hunter_add_package(ZLIB)
+find_package(ZLIB CONFIG REQUIRED)
 
 # COMMAND LINE OPTIONS
-option(PNG_SHARED "Build shared lib" ON)
-option(PNG_STATIC "Build static lib" ON)
-option(PNG_TESTS  "Build libpng tests" ON)
+option(PNG_TESTS  "Build libpng tests" YES)
 
 # Many more configuration options could be added here
 option(PNG_FRAMEWORK "Build OS X framework" OFF)
-option(PNG_DEBUG "Build with debug output" OFF)
+option(PNGARG        "Disable ANSI-C prototypes" OFF)
 option(PNG_HARDWARE_OPTIMIZATIONS "Enable hardware optimizations" ON)
 
 set(PNG_PREFIX "" CACHE STRING "Prefix to add to the API function names")
 set(DFA_XTRA "" CACHE FILEPATH "File containing extra configuration settings")
+
+option(PNG_DISABLE_AWK "Disable AWK based scripts code generation" YES)
 
 if(PNG_HARDWARE_OPTIMIZATIONS)
 
@@ -200,7 +202,9 @@ endif(PNG_HARDWARE_OPTIMIZATIONS)
 set(PNG_LIB_NAME png${PNGLIB_MAJOR}${PNGLIB_MINOR})
 
 # to distinguish between debug and release lib
-set(CMAKE_DEBUG_POSTFIX "d")
+if(NOT DEFINED CMAKE_DEBUG_POSTFIX)
+  set(CMAKE_DEBUG_POSTFIX "d")
+endif()
 
 include(CheckCSourceCompiles)
 option(ld-version-script "Enable linker version script" ON)
@@ -272,13 +276,13 @@ find_program(AWK NAMES gawk awk)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-if(NOT AWK OR ANDROID)
+include(CMakeParseArguments)
+if(NOT AWK OR ANDROID OR PNG_DISABLE_AWK)
   # No awk available to generate sources; use pre-built pnglibconf.h
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/scripts/pnglibconf.h.prebuilt
                  ${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.h)
   add_custom_target(genfiles) # Dummy
 else()
-  include(CMakeParseArguments)
   # Generate .chk from .out with awk
   # generate_chk(INPUT inputfile OUTPUT outputfile [DEPENDS dep1 [dep2...]])
   function(generate_chk)
@@ -451,7 +455,7 @@ else()
     "${CMAKE_CURRENT_BINARY_DIR}/scripts/symbols.chk"
     "${CMAKE_CURRENT_BINARY_DIR}/scripts/symbols.out"
     "${CMAKE_CURRENT_BINARY_DIR}/scripts/vers.out")
-endif(NOT AWK OR ANDROID)
+endif()
 
 # OUR SOURCES
 set(libpng_public_hdrs
@@ -465,7 +469,7 @@ set(libpng_private_hdrs
   pnginfo.h
   pngstruct.h
 )
-if(AWK AND NOT ANDROID)
+if(AWK AND NOT ANDROID AND NOT PNG_DISABLE_AWK)
   list(APPEND libpng_private_hdrs "${CMAKE_CURRENT_BINARY_DIR}/pngprefix.h")
 endif()
 set(libpng_sources
@@ -517,61 +521,25 @@ if(MSVC)
   add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
 endif()
 
-if(PNG_DEBUG)
-  add_definitions(-DPNG_DEBUG)
-endif()
-
 # NOW BUILD OUR TARGET
-include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${ZLIB_INCLUDE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-unset(PNG_LIB_TARGETS)
+add_library(png ${libpng_sources})
 
-if(PNG_SHARED)
-  add_library(png SHARED ${libpng_sources})
-  set(PNG_LIB_TARGETS png)
-  set_target_properties(png PROPERTIES OUTPUT_NAME ${PNG_LIB_NAME})
-  add_dependencies(png genfiles)
-  if(MSVC)
-    # msvc does not append 'lib' - do it here to have consistent name
-    set_target_properties(png PROPERTIES PREFIX "lib")
-    set_target_properties(png PROPERTIES IMPORT_PREFIX "lib")
-  endif()
-  target_link_libraries(png ${ZLIB_LIBRARY} ${M_LIBRARY})
-
-  if(UNIX AND AWK)
-    if(HAVE_LD_VERSION_SCRIPT)
-      set_target_properties(png PROPERTIES LINK_FLAGS
-        "-Wl,--version-script='${CMAKE_CURRENT_BINARY_DIR}/libpng.vers'")
-    elseif(HAVE_SOLARIS_LD_VERSION_SCRIPT)
-      set_target_properties(png PROPERTIES LINK_FLAGS
-        "-Wl,-M -Wl,'${CMAKE_CURRENT_BINARY_DIR}/libpng.vers'")
-    endif()
-  endif()
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "WindowsStore")
+  # ExitProcess not available
+  target_compile_definitions(png PRIVATE -DPNG_WINDOWS_STORE)
+elseif(MSVC)
+  # ExitProcess
+  target_link_libraries(png PUBLIC Kernel32)
 endif()
 
-if(PNG_STATIC)
-  # does not work without changing name
-  set(PNG_LIB_NAME_STATIC png_static)
-  add_library(png_static STATIC ${libpng_sources})
-  add_dependencies(png_static genfiles)
-  # MSVC doesn't use a different file extension for shared vs. static
-  # libs.  We are able to change OUTPUT_NAME to remove the _static
-  # for all other platforms.
-  if(NOT MSVC)
-    set_target_properties(png_static PROPERTIES
-      OUTPUT_NAME "${PNG_LIB_NAME}"
-      CLEAN_DIRECT_OUTPUT 1)
-  else()
-    set_target_properties(png_static PROPERTIES
-      OUTPUT_NAME "${PNG_LIB_NAME}_static"
-      CLEAN_DIRECT_OUTPUT 1)
-  endif()
-  list(APPEND PNG_LIB_TARGETS png_static)
-  if(MSVC)
-    # msvc does not append 'lib' - do it here to have consistent name
-    set_target_properties(png_static PROPERTIES PREFIX "lib")
-  endif()
-  target_link_libraries(png_static ${ZLIB_LIBRARY} ${M_LIBRARY})
+# Some platforms (e.g. Linux) need separate math library
+include(CheckLibraryExists)
+check_library_exists(m pow "" LIB_M_REQUIRED)
+set(M_LIBRARY "")
+if(LIB_M_REQUIRED)
+  set(M_LIBRARY m)
 endif()
 
 if(PNG_FRAMEWORK)
@@ -588,18 +556,15 @@ if(PNG_FRAMEWORK)
     XCODE_ATTRIBUTE_INSTALL_PATH "@rpath"
     PUBLIC_HEADER "${libpng_public_hdrs}"
     OUTPUT_NAME png)
-  target_link_libraries(png_framework ${ZLIB_LIBRARY} ${M_LIBRARY})
+  target_link_libraries(png_framework PRIVATE ZLIB::zlib ${M_LIBRARY})
 endif()
 
-if(NOT PNG_LIB_TARGETS)
-  message(SEND_ERROR
-    "No library variant selected to build. "
-    "Please enable at least one of the following options: "
-    "PNG_STATIC, PNG_SHARED, PNG_FRAMEWORK")
-endif()
+target_link_libraries(png PRIVATE ZLIB::zlib ${M_LIBRARY})
 
-if(PNG_SHARED AND WIN32)
-  set_target_properties(png PROPERTIES DEFINE_SYMBOL PNG_BUILD_DLL)
+target_compile_definitions(png PUBLIC "$<$<CONFIG:Debug>:PNG_DEBUG>")
+
+if(BUILD_SHARED_LIBS AND WIN32)
+  target_compile_definitions(png PUBLIC "PNG_BUILD_DLL")
 endif()
 
 function(png_add_test)
@@ -627,7 +592,7 @@ function(png_add_test)
            -P "${CMAKE_CURRENT_BINARY_DIR}/tests/${_PAT_NAME}.cmake")
 endfunction()
 
-if(PNG_TESTS AND PNG_SHARED)
+if(PNG_TESTS)
   # Find test PNG files by globbing, but sort lists to ensure
   # consistency between different filesystems.
   file(GLOB PNGSUITE_PNGS "${CMAKE_CURRENT_SOURCE_DIR}/contrib/pngsuite/*.png")
@@ -638,12 +603,12 @@ if(PNG_TESTS AND PNG_SHARED)
   set(PNGTEST_PNG "${CMAKE_CURRENT_SOURCE_DIR}/pngtest.png")
 
   add_executable(pngtest ${pngtest_sources})
-  target_link_libraries(pngtest png)
+  target_link_libraries(pngtest png ZLIB::zlib ${M_LIBRARY})
 
   png_add_test(NAME pngtest COMMAND pngtest FILES "${PNGTEST_PNG}")
 
   add_executable(pngvalid ${pngvalid_sources})
-  target_link_libraries(pngvalid png)
+  target_link_libraries(pngvalid png ZLIB::zlib ${M_LIBRARY})
 
   png_add_test(NAME pngvalid-gamma-16-to-8
                COMMAND pngvalid OPTIONS --gamma-16-to-8)
@@ -675,7 +640,7 @@ if(PNG_TESTS AND PNG_SHARED)
                COMMAND pngvalid OPTIONS --transform)
 
   add_executable(pngstest ${pngstest_sources})
-  target_link_libraries(pngstest png)
+  target_link_libraries(pngstest png ${M_LIBRARY})
 
   foreach(gamma_type 1.8 linear none sRGB)
     foreach(alpha_type none alpha)
@@ -747,61 +712,15 @@ if(PNG_TESTS AND PNG_SHARED)
   png_add_test(NAME pngimage-full COMMAND pngimage OPTIONS --exhaustive --list-combos --log FILES ${PNGSUITE_PNGS})
 endif()
 
-if(PNG_SHARED)
+if(BUILD_SHARED_LIBS)
   add_executable(pngfix ${pngfix_sources})
-  target_link_libraries(pngfix png)
+  target_link_libraries(pngfix png ZLIB::zlib ${M_LIBRARY})
   set(PNG_BIN_TARGETS pngfix)
 
   add_executable(png-fix-itxt ${png_fix_itxt_sources})
-  target_link_libraries(png-fix-itxt ${ZLIB_LIBRARY} ${M_LIBRARY})
+  target_link_libraries(png-fix-itxt ZLIB::zlib ${M_LIBRARY})
   list(APPEND PNG_BIN_TARGETS png-fix-itxt)
 endif()
-
-# Set a variable with CMake code which:
-# Creates a symlink from src to dest (if possible) or alternatively
-# copies if different.
-include(CMakeParseArguments)
-
-function(create_symlink DEST_FILE)
-
-  cmake_parse_arguments(S "" "FILE;TARGET" "" ${ARGN})
-
-  if(NOT S_TARGET AND NOT S_FILE)
-    message(FATAL_ERROR "create_symlink: Missing TARGET or FILE argument")
-  endif()
-
-  if(S_TARGET AND S_FILE)
-    message(FATAL_ERROR "create_symlink: Both source file ${S_FILE} and build target ${S_TARGET} arguments are present; can only have one.")
-  endif()
-
-  if(S_FILE)
-    # If we don't need to symlink something that's coming from a build target,
-    # we can go ahead and symlink/copy at configure time.
-    if(CMAKE_HOST_WIN32 AND NOT CYGWIN)
-      execute_process(
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different ${S_FILE} ${DEST_FILE}
-        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-    else()
-      execute_process(
-        COMMAND ${CMAKE_COMMAND} -E create_symlink ${S_FILE} ${DEST_FILE}
-        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-    endif()
-  endif()
-
-  if(S_TARGET)
-    # We need to use generator expressions, which can be a bit tricky, so for
-    # simplicity make the symlink a POST_BUILD step and use the TARGET
-    # signature of add_custom_command.
-    if(CMAKE_HOST_WIN32 AND NOT CYGWIN)
-      add_custom_command(TARGET ${S_TARGET} POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different $<TARGET_LINKER_FILE_NAME:${S_TARGET}> $<TARGET_LINKER_FILE_DIR:${S_TARGET}>/${DEST_FILE})
-    else()
-      add_custom_command(TARGET ${S_TARGET} POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E create_symlink $<TARGET_LINKER_FILE_NAME:${S_TARGET}> $<TARGET_LINKER_FILE_DIR:${S_TARGET}>/${DEST_FILE})
-    endif()
-  endif()
-
-endfunction()
 
 # Create source generation scripts.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/scripts/genchk.cmake.in
@@ -811,121 +730,50 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/scripts/genout.cmake.in
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/scripts/gensrc.cmake.in
                ${CMAKE_CURRENT_BINARY_DIR}/scripts/gensrc.cmake @ONLY)
 
-# libpng is a library so default to 'lib'
-if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
-  set(CMAKE_INSTALL_LIBDIR lib)
-endif()
+####
+# Installation (https://github.com/forexample/package-example)
 
-# CREATE PKGCONFIG FILES
-# We use the same files like ./configure, so we have to set its vars.
-# Only do this on Windows for Cygwin - the files don't make much sense outside
-# of a UNIX look-alike.
-if(NOT WIN32 OR CYGWIN OR MINGW)
-  set(prefix      ${CMAKE_INSTALL_PREFIX})
-  set(exec_prefix ${CMAKE_INSTALL_PREFIX})
-  set(libdir      ${CMAKE_INSTALL_FULL_LIBDIR})
-  set(includedir  ${CMAKE_INSTALL_FULL_INCLUDEDIR})
-  set(LIBS        "-lz -lm")
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libpng.pc.in
-    ${CMAKE_CURRENT_BINARY_DIR}/${PNGLIB_NAME}.pc @ONLY)
-  create_symlink(libpng.pc FILE ${PNGLIB_NAME}.pc)
+set(config_install_dir "lib/cmake/${PROJECT_NAME}")
+set(include_install_dir "include")
 
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libpng-config.in
-    ${CMAKE_CURRENT_BINARY_DIR}/${PNGLIB_NAME}-config @ONLY)
-  create_symlink(libpng-config FILE ${PNGLIB_NAME}-config)
-endif()
+set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
 
-# SET UP LINKS
-if(PNG_SHARED)
-  set_target_properties(png PROPERTIES
-#   VERSION 16.${PNGLIB_RELEASE}.1.6.36
-    VERSION 16.${PNGLIB_RELEASE}.0
-    SOVERSION 16
-    CLEAN_DIRECT_OUTPUT 1)
-endif()
+set(version_config "${generated_dir}/${PROJECT_NAME}ConfigVersion.cmake")
+set(project_config "${generated_dir}/${PROJECT_NAME}Config.cmake")
+set(targets_export_name "${PROJECT_NAME}Targets")
+set(namespace "${PROJECT_NAME}::")
 
-# INSTALL
-if(NOT SKIP_INSTALL_LIBRARIES AND NOT SKIP_INSTALL_ALL)
-  install(TARGETS ${PNG_LIB_TARGETS}
-          EXPORT libpng
-          RUNTIME DESTINATION bin
-          LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-          ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-          FRAMEWORK DESTINATION ${CMAKE_INSTALL_LIBDIR})
+include(CMakePackageConfigHelpers)
 
-  if(PNG_SHARED)
-    # Create a symlink for libpng.dll.a => libpng16.dll.a on Cygwin
-    if(CYGWIN OR MINGW)
-      create_symlink(libpng${CMAKE_IMPORT_LIBRARY_SUFFIX} TARGET png)
-      install(FILES $<TARGET_LINKER_FILE_DIR:png>/libpng${CMAKE_IMPORT_LIBRARY_SUFFIX}
-              DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    endif()
+# Note: PROJECT_VERSION is used as a VERSION
+write_basic_package_version_file(
+    "${version_config}" COMPATIBILITY SameMajorVersion
+)
 
-    if(NOT WIN32)
-      create_symlink(libpng${CMAKE_SHARED_LIBRARY_SUFFIX} TARGET png)
-      install(FILES $<TARGET_LINKER_FILE_DIR:png>/libpng${CMAKE_SHARED_LIBRARY_SUFFIX}
-              DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    endif()
-  endif()
+# Note: variable 'targets_export_name' used
+configure_file("cmake/Config.cmake.in" "${project_config}" @ONLY)
 
-  if(PNG_STATIC)
-    if(NOT WIN32 OR CYGWIN OR MINGW)
-      create_symlink(libpng${CMAKE_STATIC_LIBRARY_SUFFIX} TARGET png_static)
-      install(FILES $<TARGET_LINKER_FILE_DIR:png_static>/libpng${CMAKE_STATIC_LIBRARY_SUFFIX}
-              DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    endif()
-  endif()
-endif()
+install(
+    TARGETS png
+    EXPORT "${targets_export_name}"
+    LIBRARY DESTINATION "lib"
+    ARCHIVE DESTINATION "lib"
+    RUNTIME DESTINATION "bin"
+    INCLUDES DESTINATION "${include_install_dir}"
+)
 
-if(NOT SKIP_INSTALL_HEADERS AND NOT SKIP_INSTALL_ALL)
-  install(FILES ${libpng_public_hdrs} DESTINATION include)
-  install(FILES ${libpng_public_hdrs} DESTINATION include/${PNGLIB_NAME})
-endif()
-if(NOT SKIP_INSTALL_EXECUTABLES AND NOT SKIP_INSTALL_ALL)
-  if(NOT WIN32 OR CYGWIN OR MINGW)
-    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/libpng-config DESTINATION bin)
-    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${PNGLIB_NAME}-config DESTINATION bin)
-  endif()
-endif()
+install(
+    FILES ${libpng_public_hdrs}
+    DESTINATION "${include_install_dir}"
+)
 
-if(NOT SKIP_INSTALL_PROGRAMS AND NOT SKIP_INSTALL_ALL)
-  install(TARGETS ${PNG_BIN_TARGETS}
-          RUNTIME DESTINATION bin)
-endif()
+install(
+    FILES "${project_config}" "${version_config}"
+    DESTINATION "${config_install_dir}"
+)
 
-if(NOT SKIP_INSTALL_FILES AND NOT SKIP_INSTALL_ALL)
-  # Install man pages
-  if(NOT PNG_MAN_DIR)
-    set(PNG_MAN_DIR "share/man")
-  endif()
-  install(FILES libpng.3 libpngpf.3 DESTINATION ${PNG_MAN_DIR}/man3)
-  install(FILES png.5 DESTINATION ${PNG_MAN_DIR}/man5)
-  # Install pkg-config files
-  if(NOT CMAKE_HOST_WIN32 OR CYGWIN OR MINGW)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpng.pc
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/libpng-config
-            DESTINATION bin)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/${PNGLIB_NAME}.pc
-            DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
-    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${PNGLIB_NAME}-config
-            DESTINATION bin)
-  endif()
-endif()
-
-# Create an export file that CMake users can include() to import our targets.
-if(NOT SKIP_INSTALL_EXPORT AND NOT SKIP_INSTALL_ALL)
-  install(EXPORT libpng DESTINATION lib/libpng FILE lib${PNG_LIB_NAME}.cmake)
-endif()
-
-# what's with libpng-manual.txt and all the extra files?
-
-# UNINSTALL
-# do we need this?
-
-# DIST
-# do we need this?
-
-# to create msvc import lib for mingw compiled shared lib
-# pexports libpng.dll > libpng.def
-# lib /def:libpng.def /machine:x86
+install(
+    EXPORT "${targets_export_name}"
+    NAMESPACE "${namespace}"
+    DESTINATION "${config_install_dir}"
+)
