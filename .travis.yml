@@ -155,6 +155,9 @@ install:
   - export ANDROID_NDK_r16b="`pwd`/_ci/android-ndk-r16b"
   - export ANDROID_NDK_r17="`pwd`/_ci/android-ndk-r17"
 
+  # Allow 20 minutes for the long silent last test.
+  - travis_wait mvn install
+
 script:
   - polly.py --toolchain ${TOOLCHAIN} --config ${CONFIG} --verbose ${TEST}
 
