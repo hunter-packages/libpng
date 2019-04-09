@@ -75,7 +75,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm" OR
     set(neon_default "off")
   else()
     set(neon_default "check")
-  endif
+  endif()
   set(PNG_ARM_NEON "${neon_default}" CACHE STRING "Enable ARM NEON optimizations:
      check: (default) use internal checking code;
      off: disable the optimizations;
