@@ -25,60 +25,87 @@ addons:
 dist:
   - xenial
 
-env:
-  - CONFIG=Debug
-  - CONFIG=Release
-
 matrix:
   include:
     # Linux {
 
-    - os: linux
-      env: >
-        TOOLCHAIN=clang-cxx17
+      # Debug {
+      - os: linux
+        env: TOOLCHAIN=clang-cxx17 CONFIG=Debug
 
-    - os: linux
-      env: >
-        TOOLCHAIN=gcc-7-cxx17
+      - os: linux
+        env: TOOLCHAIN=gcc-7-cxx17 CONFIG=Debug
 
-    - os: linux
-      env: >
-        TOOLCHAIN=android-ndk-r17-api-24-arm64-v8a-clang-libcxx14
+      - os: linux
+        env: TOOLCHAIN=android-ndk-r17-api-24-arm64-v8a-clang-libcxx14 CONFIG=Debug
 
-    - os: linux
-      env: >
-        TOOLCHAIN=analyze-cxx17
+      - os: linux
+        env: TOOLCHAIN=analyze-cxx17 CONFIG=Debug
 
-    - os: linux
-      env: >
-        TOOLCHAIN=sanitize-address-cxx17
+      - os: linux
+        env: TOOLCHAIN=sanitize-address-cxx17 CONFIG=Debug
 
-    - os: linux
-      env: >
-        TOOLCHAIN=sanitize-leak-cxx17
+      - os: linux
+        env: TOOLCHAIN=sanitize-leak-cxx17 CONFIG=Debug
 
-    - os: linux
-      env: >
-        TOOLCHAIN=sanitize-thread-cxx17
+      - os: linux
+        env: TOOLCHAIN=sanitize-thread-cxx17 CONFIG=Debug
+      # }
+
+      # Release {
+      - os: linux
+        env: TOOLCHAIN=clang-cxx17 CONFIG=Release
+
+      - os: linux
+        env: TOOLCHAIN=gcc-7-cxx17 CONFIG=Release
+
+      - os: linux
+        env: TOOLCHAIN=android-ndk-r17-api-24-arm64-v8a-clang-libcxx14 CONFIG=Release
+
+      - os: linux
+        env: TOOLCHAIN=analyze-cxx17 CONFIG=Release
+
+      - os: linux
+        env: TOOLCHAIN=sanitize-address-cxx17 CONFIG=Release
+
+      - os: linux
+        env: TOOLCHAIN=sanitize-leak-cxx17 CONFIG=Release
+
+      - os: linux
+        env: TOOLCHAIN=sanitize-thread-cxx17 CONFIG=Release
+      # }
 
     # }
 
     # OSX {
 
-    - os: osx
-      osx_image: xcode9.4
-      env: >
-        TOOLCHAIN=osx-10-13-make-cxx14
+      # Debug {
+      - os: osx
+        osx_image: xcode9.4
+        env: TOOLCHAIN=osx-10-13-make-cxx14 CONFIG=Debug
 
-    - os: osx
-      osx_image: xcode9.4
-      env: >
-        TOOLCHAIN=osx-10-13-cxx14
+      - os: osx
+        osx_image: xcode9.4
+        env: TOOLCHAIN=osx-10-13-cxx14 CONFIG=Debug
 
-    - os: osx
-      osx_image: xcode9.4
-      env: >
-        TOOLCHAIN=ios-nocodesign-11-4-dep-9-3
+      - os: osx
+        osx_image: xcode9.4
+        env: TOOLCHAIN=ios-nocodesign-11-4-dep-9-3 CONFIG=Debug
+      # }
+
+      # Release {
+      - os: osx
+        osx_image: xcode9.4
+        env: TOOLCHAIN=osx-10-13-make-cxx14 CONFIG=Release
+
+      - os: osx
+        osx_image: xcode9.4
+        env: TOOLCHAIN=osx-10-13-cxx14 CONFIG=Release
+
+      - os: osx
+        osx_image: xcode9.4
+        env: TOOLCHAIN=ios-nocodesign-11-4-dep-9-3 CONFIG=Release
+      # }
 
     # }
 
