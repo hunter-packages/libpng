@@ -1,0 +1,5 @@
+include(CMakeFindDependencyMacro)
+
+find_dependency(ZLIB CONFIG)
+
+include("${CMAKE_CURRENT_LIST_DIR}/@targets_export_name@.cmake")
