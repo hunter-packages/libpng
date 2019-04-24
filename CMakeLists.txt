@@ -25,8 +25,8 @@ set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
 include("cmake/HunterGate.cmake")
 HunterGate(
-    URL "https://github.com/ruslo/hunter/archive/v0.23.152.tar.gz"
-    SHA1 "0c9801f60a8149c3105db04501bbcfb155581b7d"
+    URL "https://github.com/ruslo/hunter/archive/v0.23.161.tar.gz"
+    SHA1 "714a57df86883ae726f3a0572bf6b74a2f7000c0"
 )
 
 project(PNG VERSION 1.6.36 LANGUAGES C ASM)
@@ -67,11 +67,30 @@ option(PNG_DISABLE_AWK "Disable AWK based scripts code generation" YES)
 
 if(PNG_HARDWARE_OPTIMIZATIONS)
 
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "")
+  # No architecture at configure time. Check it at compile time.
+  set(optimization_default_enable "compile-check")
+  set(optimization_default_check "compile-check")
+else()
+  set(optimization_default_enable "on")
+  set(optimization_default_check "runtime-check")
+endif()
+
 # set definitions and sources for arm
+set(libpng_arm_sources
+  arm/arm_init.c
+  arm/filter_neon_intrinsics.c
+  arm/palette_neon_intrinsics.c)
+if(UNIX)
+  # This file needs a GCC compatible compiler to pre-process it properly.
+  list(APPEND libpng_arm_sources arm/filter_neon.S)
+endif(UNIX)
+
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm" OR
-    CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64")
-  set(PNG_ARM_NEON_POSSIBLE_VALUES check on off)
-  set(PNG_ARM_NEON "check" CACHE STRING "Enable ARM NEON optimizations:
+    CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64" OR
+    CMAKE_SYSTEM_PROCESSOR STREQUAL "")
+  set(PNG_ARM_NEON_POSSIBLE_VALUES compile-check runtime-check on off)
+  set(PNG_ARM_NEON "${optimization_default_check}" CACHE STRING "Enable ARM NEON optimizations:
      check: (default) use internal checking code;
      off: disable the optimizations;
      on: turn on unconditionally.")
@@ -82,27 +101,28 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm" OR
     message(FATAL_ERROR
             "PNG_ARM_NEON must be one of [${PNG_ARM_NEON_POSSIBLE_VALUES}]")
   elseif(NOT ${PNG_ARM_NEON} STREQUAL "off")
-    set(libpng_arm_sources
-      arm/arm_init.c
-      arm/filter_neon.S
-      arm/filter_neon_intrinsics.c
-      arm/palette_neon_intrinsics.c)
-
+    # Don't set PNG_ARM_NEON_OPT for compile-check
     if(${PNG_ARM_NEON} STREQUAL "on")
       add_definitions(-DPNG_ARM_NEON_OPT=2)
-    elseif(${PNG_ARM_NEON} STREQUAL "check")
+    elseif(${PNG_ARM_NEON} STREQUAL "runtime-check")
       add_definitions(-DPNG_ARM_NEON_CHECK_SUPPORTED)
     endif()
   else()
+    set(libpng_arm_sources)
     add_definitions(-DPNG_ARM_NEON_OPT=0)
   endif()
 endif()
 
 # set definitions and sources for powerpc
+set(libpng_powerpc_sources
+  powerpc/powerpc_init.c
+  powerpc/filter_vsx_intrinsics.c)
+
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^powerpc*" OR
-   CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc64*")
-  set(PNG_POWERPC_VSX_POSSIBLE_VALUES on off)
-  set(PNG_POWERPC_VSX "on" CACHE STRING "Enable POWERPC VSX optimizations:
+    CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc64*" OR
+    CMAKE_SYSTEM_PROCESSOR STREQUAL "")
+  set(PNG_POWERPC_VSX_POSSIBLE_VALUES compile-check on off)
+  set(PNG_POWERPC_VSX "${optimization_default_enable}" CACHE STRING "Enable POWERPC VSX optimizations:
      off: disable the optimizations.")
   set_property(CACHE PNG_POWERPC_VSX PROPERTY STRINGS
      ${PNG_POWERPC_VSX_POSSIBLE_VALUES})
@@ -111,9 +131,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^powerpc*" OR
     message(FATAL_ERROR
             "PNG_POWERPC_VSX must be one of [${PNG_POWERPC_VSX_POSSIBLE_VALUES}]")
   elseif(NOT ${PNG_POWERPC_VSX} STREQUAL "off")
-    set(libpng_powerpc_sources
-      powerpc/powerpc_init.c
-      powerpc/filter_vsx_intrinsics.c)
+    # Don't set PNG_POWERPC_VSX_OPT for compile-check
     if(${PNG_POWERPC_VSX} STREQUAL "on")
       add_definitions(-DPNG_POWERPC_VSX_OPT=2)
     endif()
@@ -123,10 +141,15 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^powerpc*" OR
 endif()
 
 # set definitions and sources for intel
+set(libpng_intel_sources
+  intel/intel_init.c
+  intel/filter_sse2_intrinsics.c)
+
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^i?86" OR
-   CMAKE_SYSTEM_PROCESSOR MATCHES "^x86_64*")
-  set(PNG_INTEL_SSE_POSSIBLE_VALUES on off)
-  set(PNG_INTEL_SSE "on" CACHE STRING "Enable INTEL_SSE optimizations:
+    CMAKE_SYSTEM_PROCESSOR MATCHES "^x86_64*" OR
+    CMAKE_SYSTEM_PROCESSOR STREQUAL "")
+  set(PNG_INTEL_SSE_POSSIBLE_VALUES compile-check on off)
+  set(PNG_INTEL_SSE "${optimization_default_enable}" CACHE STRING "Enable INTEL_SSE optimizations:
      off: disable the optimizations")
   set_property(CACHE PNG_INTEL_SSE PROPERTY STRINGS
      ${PNG_INTEL_SSE_POSSIBLE_VALUES})
@@ -135,9 +158,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^i?86" OR
     message(FATAL_ERROR
             "PNG_INTEL_SSE must be one of [${PNG_INTEL_SSE_POSSIBLE_VALUES}]")
   elseif(NOT ${PNG_INTEL_SSE} STREQUAL "off")
-    set(libpng_intel_sources
-      intel/intel_init.c
-      intel/filter_sse2_intrinsics.c)
+    # Don't set PNG_INTEL_SSE_OPT for compile-check
     if(${PNG_INTEL_SSE} STREQUAL "on")
       add_definitions(-DPNG_INTEL_SSE_OPT=1)
     endif()
@@ -147,10 +168,15 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^i?86" OR
 endif()
 
 # set definitions and sources for MIPS
+set(libpng_mips_sources
+  mips/mips_init.c
+  mips/filter_msa_intrinsics.c)
+
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "mipsel*" OR
-   CMAKE_SYSTEM_PROCESSOR MATCHES "mips64el*")
-  set(PNG_MIPS_MSA_POSSIBLE_VALUES on off)
-  set(PNG_MIPS_MSA "on" CACHE STRING "Enable MIPS_MSA optimizations:
+    CMAKE_SYSTEM_PROCESSOR MATCHES "mips64el*" OR
+    CMAKE_SYSTEM_PROCESSOR STREQUAL "")
+  set(PNG_MIPS_MSA_POSSIBLE_VALUES compile-check on off)
+  set(PNG_MIPS_MSA "${optimization_default_enable}" CACHE STRING "Enable MIPS_MSA optimizations:
      off: disable the optimizations")
   set_property(CACHE PNG_MIPS_MSA PROPERTY STRINGS
      ${PNG_MIPS_MSA_POSSIBLE_VALUES})
@@ -159,9 +185,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "mipsel*" OR
     message(FATAL_ERROR
             "PNG_MIPS_MSA must be one of [${PNG_MIPS_MSA_POSSIBLE_VALUES}]")
   elseif(NOT ${PNG_MIPS_MSA} STREQUAL "off")
-    set(libpng_mips_sources
-      mips/mips_init.c
-      mips/filter_msa_intrinsics.c)
+    # Don't set PNG_MIPS_MSA_OPT for compile-check
     if(${PNG_MIPS_MSA} STREQUAL "on")
       add_definitions(-DPNG_MIPS_MSA_OPT=2)
     endif()
