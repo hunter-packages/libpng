@@ -71,12 +71,7 @@ if(PNG_HARDWARE_OPTIMIZATIONS)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm" OR
     CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64")
   set(PNG_ARM_NEON_POSSIBLE_VALUES check on off)
-  if(IOS)
-    set(neon_default "off")
-  else()
-    set(neon_default "check")
-  endif()
-  set(PNG_ARM_NEON "${neon_default}" CACHE STRING "Enable ARM NEON optimizations:
+  set(PNG_ARM_NEON "check" CACHE STRING "Enable ARM NEON optimizations:
      check: (default) use internal checking code;
      off: disable the optimizations;
      on: turn on unconditionally.")
@@ -177,29 +172,11 @@ endif()
 
 else(PNG_HARDWARE_OPTIMIZATIONS)
 
-# set definitions and sources for arm
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm" OR
-   CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64")
-  add_definitions(-DPNG_ARM_NEON_OPT=0)
-endif()
-
-# set definitions and sources for powerpc
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^powerpc*" OR
-   CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc64*")
-  add_definitions(-DPNG_POWERPC_VSX_OPT=0)
-endif()
-
-# set definitions and sources for intel
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^i?86" OR
-   CMAKE_SYSTEM_PROCESSOR MATCHES "^x86_64*")
-  add_definitions(-DPNG_INTEL_SSE_OPT=0)
-endif()
-
-# set definitions and sources for MIPS
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "mipsel*" OR
-   CMAKE_SYSTEM_PROCESSOR MATCHES "mips64el*")
-  add_definitions(-DPNG_MIPS_MSA_OPT=0)
-endif()
+# set definitions and sources for arm, powerpc, intel and MIPS
+add_definitions(-DPNG_ARM_NEON_OPT=0)
+add_definitions(-DPNG_POWERPC_VSX_OPT=0)
+add_definitions(-DPNG_INTEL_SSE_OPT=0)
+add_definitions(-DPNG_MIPS_MSA_OPT=0)
 
 endif(PNG_HARDWARE_OPTIMIZATIONS)
 
