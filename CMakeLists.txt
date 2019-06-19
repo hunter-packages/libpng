@@ -11,7 +11,10 @@
 # For conditions of distribution and use, see the disclaimer
 # and license in png.h
 
-cmake_minimum_required(VERSION 3.0)
+# ALIAS for imported target (see 'cmake/Config.cmake.in'):
+# - https://cmake.org/cmake/help/latest/release/3.11.html#other
+cmake_minimum_required(VERSION 3.11)
+cmake_policy(VERSION 3.1)
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
 include("cmake/HunterGate.cmake")
