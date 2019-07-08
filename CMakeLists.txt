@@ -19,9 +19,7 @@
 # For conditions of distribution and use, see the disclaimer
 # and license in png.h
 
-# ALIAS for imported target (see 'cmake/Config.cmake.in'):
-# - https://cmake.org/cmake/help/latest/release/3.11.html#other
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.1)
 cmake_policy(VERSION 3.1)
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
@@ -44,8 +42,7 @@ set(PNGLIB_VERSION ${PNGLIB_MAJOR}.${PNGLIB_MINOR}.${PNGLIB_RELEASE})
 include(GNUInstallDirs)
 
 # needed packages
-if(${CMAKE_MAJOR_VERSION} GREATER 3 OR
-    (${CMAKE_MAJOR_VERSION} EQUAL 3 AND ${CMAKE_MINOR_VERSION} GREATER_EQUAL 12))
+if(NOT CMAKE_VERSION VERSION_LESS 3.12)
   # For CMake >= 3.12, find_package(<PackageName>) searches prefixes given by
   # <PackageName>_ROOT CMake variable and <PackageName>_ROOT
   # environment variable.
