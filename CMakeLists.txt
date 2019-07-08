@@ -11,9 +11,7 @@
 # For conditions of distribution and use, see the disclaimer
 # and license in png.h
 
-# ALIAS for imported target (see 'cmake/Config.cmake.in'):
-# - https://cmake.org/cmake/help/latest/release/3.11.html#other
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.1)
 cmake_policy(VERSION 3.1)
 set(CMAKE_ALLOW_LOOSE_LOOP_CONSTRUCTS true)
 
